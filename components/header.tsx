@@ -6,11 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-interface HeaderProps {
-  setActiveTab?: (tab: string) => void
-}
-
-export function Header({ setActiveTab }: HeaderProps) {
+export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -44,28 +40,8 @@ export function Header({ setActiveTab }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 bg-card px-4 py-2.5 rounded-full border border-border/50 shadow-sm w-64 transition-colors focus-within:border-primary/50">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && searchQuery.trim()) {
-                  setActiveTab?.('members')
-                }
-              }}
-              placeholder="Search members..."
-              className="w-full bg-transparent text-sm text-foreground placeholder-muted-foreground outline-none"
-            />
-          </div>
-
-          <motion.button
-            className="hidden sm:flex bg-foreground text-background hover:bg-foreground/90 font-medium px-5 py-2.5 rounded-full items-center gap-2 text-sm transition-colors shadow-sm"
-            whileTap={{ scale: 0.95 }}
-          >
-            Share +
-          </motion.button>
+          
+         
 
           <div className="relative" ref={dropdownRef}>
             <motion.button
@@ -91,14 +67,14 @@ export function Header({ setActiveTab }: HeaderProps) {
                 >
                   <div className="flex flex-col gap-1">
                     <button
-                      onClick={() => { setActiveTab?.('profile'); setIsProfileOpen(false) }}
+                      onClick={() => { router.push('/profile'); setIsProfileOpen(false) }}
                       className="flex items-center gap-3 w-full px-3 py-2 text-sm text-foreground hover:bg-muted rounded-xl transition-colors font-medium"
                     >
                       <User className="w-4 h-4 text-muted-foreground" />
                       Profile
                     </button>
                     <button
-                      onClick={() => { setActiveTab?.('settings'); setIsProfileOpen(false) }}
+                      onClick={() => { router.push('/settings'); setIsProfileOpen(false) }}
                       className="flex items-center gap-3 w-full px-3 py-2 text-sm text-foreground hover:bg-muted rounded-xl transition-colors font-medium"
                     >
                       <Settings className="w-4 h-4 text-muted-foreground" />

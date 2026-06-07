@@ -2,23 +2,25 @@
 
 import { useState, useEffect } from 'react'
 
-import { BarChart3, Users, LogIn, LogOut, Moon, Sun, Plus, Shield } from 'lucide-react'
+import { BarChart3, Users, LogIn, LogOut, Moon, Sun, Plus, Shield, Database, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/auth-context'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 
-interface SidebarProps {
-  activeTab: string
-  setActiveTab: (tab: string) => void
-}
-
-export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export function Sidebar() {
   const { userData } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const activeTab = pathname === '/' ? 'overview' : pathname.replace('/', '')
   const { theme, setTheme } = useTheme()
   const [activeCount, setActiveCount] = useState<number | null>(null)
+  const [mysqlConnected, setMysqlConnected] = useState<boolean | null>(null)
+  const [isLocal] = useState(() => 
+    typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  )
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -35,11 +37,28 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    if (!isLocal) return
+    const checkMysql = async () => {
+      try {
+        const res = await fetch('/api/mysql/status')
+        const data = await res.json()
+        setMysqlConnected(data.connected)
+      } catch {
+        setMysqlConnected(false)
+      }
+    }
+    checkMysql()
+    const interval = setInterval(checkMysql, 10000)
+    return () => clearInterval(interval)
+  }, [isLocal])
+
   const menuItems = [
-    { id: 'overview', label: 'Dashboard', icon: BarChart3, badge: null },
-    { id: 'check-in', label: 'Check-In', icon: LogIn, badge: activeCount !== null ? String(activeCount) : null },
-    { id: 'members', label: 'Customers', icon: Users, badge: null },
-    ...(userData?.role === 'superadmin' ? [{ id: 'admin-management', label: 'Admin Mgmt', icon: Shield, badge: null as string | null }] : []),
+    { id: 'overview', label: 'Dashboard', icon: BarChart3, path: '/', badge: null },
+    { id: 'check-in', label: 'Check-In', icon: LogIn, path: '/check-in', badge: activeCount !== null ? String(activeCount) : null },
+    { id: 'members', label: 'Customers', icon: Users, path: '/members', badge: null },
+    ...(isLocal ? [{ id: 'sync', label: 'Data Sync', icon: RefreshCw, path: '/sync', badge: null as string | null }] : []),
+    ...(userData?.role === 'superadmin' ? [{ id: 'admin-management', label: 'Admin Mgmt', icon: Shield, path: '/admin-management', badge: null as string | null }] : []),
   ]
 
   const handleLogout = async () => {
@@ -65,10 +84,10 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-4">
           Product
         </div>
-        {menuItems.map(({ id, label, icon: Icon, badge }) => (
+        {menuItems.map(({ id, label, icon: Icon, path, badge }) => (
           <motion.button
             key={id}
-            onClick={() => setActiveTab(id)}
+            onClick={() => router.push(path)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-colors ${
               activeTab === id
                 ? 'bg-muted text-foreground font-medium'
@@ -90,6 +109,18 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       </nav>
 
       <div className="pt-6 mt-6 border-t border-border space-y-4">
+        {isLocal && mysqlConnected !== null && (
+          <a
+            href="http://127.0.0.1/phpmyadmin/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/50"
+          >
+            <Database className="w-4 h-4" />
+            <span>{mysqlConnected ? 'MySQL Connected' : 'MySQL Disconnected'}</span>
+            <span className={`w-2 h-2 rounded-full ml-auto ${mysqlConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          </a>
+        )}
         {userData && (
           <div className="flex items-center gap-3 px-2 mb-4">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex-shrink-0" />

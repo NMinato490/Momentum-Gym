@@ -1,13 +1,40 @@
 'use client'
 
-import { Moon, Sun, Monitor, Database, Download } from 'lucide-react'
+import { Moon, Sun, Monitor, Database, Download, Upload, ToggleLeft, ToggleRight, RefreshCw, FileSpreadsheet, ExternalLink } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function SettingsTab() {
   const { theme, setTheme } = useTheme()
   const [copied, setCopied] = useState(false)
-  const [exporting, setExporting] = useState<'sql' | 'csv-members' | 'csv-checkins' | 'csv-zones' | null>(null)
+  const [exporting, setExporting] = useState<'sql' | 'csv-members' | 'csv-checkins' | 'csv-zones' | 'mysql' | null>(null)
+  const [mysqlEnabled, setMysqlEnabled] = useState(false)
+  const [mysqlConnected, setMysqlConnected] = useState<boolean | null>(null)
+  const [mysqlPushing, setMysqlPushing] = useState(false)
+  const [sheetsEnabled, setSheetsEnabled] = useState(false)
+  const [sheetsSyncing, setSheetsSyncing] = useState(false)
+  const [sheetsUrl, setSheetsUrl] = useState<string | null>(null)
+  const [sheetsError, setSheetsError] = useState<string | null>(null)
+  const [isLocal] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  )
+
+  useEffect(() => {
+    if (!isLocal || !mysqlEnabled) return
+    const checkMysql = async () => {
+      try {
+        const res = await fetch('/api/mysql/status')
+        const data = await res.json()
+        setMysqlConnected(data.connected)
+      } catch {
+        setMysqlConnected(false)
+      }
+    }
+    checkMysql()
+    const interval = setInterval(checkMysql, 10000)
+    return () => clearInterval(interval)
+  }, [isLocal, mysqlEnabled])
 
   const handleCopyUid = async () => {
     try {
@@ -15,6 +42,38 @@ export function SettingsTab() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {}
+  }
+
+  const handleSyncSheets = async () => {
+    setSheetsSyncing(true)
+    setSheetsError(null)
+    setSheetsUrl(null)
+    try {
+      const res = await fetch('/api/export/sheets', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setSheetsUrl(data.url)
+      } else {
+        setSheetsError(data.error || 'Sync failed')
+      }
+    } catch {
+      setSheetsError('Failed to sync with Google Sheets')
+    } finally {
+      setSheetsSyncing(false)
+    }
+  }
+
+  const handlePushToMysql = async () => {
+    setMysqlPushing(true)
+    try {
+      const res = await fetch('/api/export/mysql', { method: 'POST' })
+      const data = await res.json()
+      alert(data.message || (data.success ? 'Data pushed to MySQL successfully!' : 'Push failed'))
+    } catch {
+      alert('Failed to push data to MySQL')
+    } finally {
+      setMysqlPushing(false)
+    }
   }
 
   const handleExport = async (format: 'sql' | 'csv', table?: string) => {
@@ -75,34 +134,36 @@ export function SettingsTab() {
           </div>
         </div>
 
-        <div className="h-px bg-border" />
+        {isLocal && <div className="h-px bg-border" />}
 
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-4">Application</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
-              <div>
-                <p className="text-sm font-medium text-foreground">Dashboard URL</p>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5">{typeof window !== 'undefined' ? window.location.origin : '—'}</p>
+        {isLocal && (
+          <div>
+            <h3 className="text-lg font-semibold text-foreground mb-4">Application</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Dashboard URL</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">{typeof window !== 'undefined' ? window.location.origin : '—'}</p>
+                </div>
+                <button
+                  onClick={handleCopyUid}
+                  className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
               </div>
-              <button
-                onClick={handleCopyUid}
-                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
 
-            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
-              <div>
-                <p className="text-sm font-medium text-foreground">Version</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}</p>
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Version</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="h-px bg-border" />
+        {isLocal && <div className="h-px bg-border" />}
 
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -110,6 +171,124 @@ export function SettingsTab() {
             Data Export
           </h3>
           <p className="text-sm text-muted-foreground mb-4">Export all data to import into MySQL.</p>
+
+          {isLocal && (
+            <div className="mb-4 p-4 rounded-xl bg-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Database className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">MySQL Integration</p>
+                    <p className="text-xs text-muted-foreground">
+                      {mysqlConnected === true ? 'Connected to local MySQL' : mysqlConnected === false ? 'MySQL not running' : 'Checking...'}
+                    </p>
+                  </div>
+                  {mysqlConnected === true && <span className="w-2 h-2 rounded-full bg-green-500" />}
+                  {mysqlConnected === false && <span className="w-2 h-2 rounded-full bg-red-500" />}
+                </div>
+                <button
+                  onClick={() => setMysqlEnabled(!mysqlEnabled)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    mysqlEnabled
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {mysqlEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                  {mysqlEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              {mysqlEnabled && mysqlConnected === true && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <button
+                    onClick={handlePushToMysql}
+                    disabled={mysqlPushing}
+                    className="flex items-center gap-3 w-full p-4 rounded-xl bg-primary/10 border border-primary/30 hover:border-primary/60 transition-colors text-left disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      {mysqlPushing ? (
+                        <RefreshCw className="w-5 h-5 text-primary animate-spin" />
+                      ) : (
+                        <Upload className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">Push All Data to MySQL</p>
+                      <p className="text-xs text-muted-foreground">Export members, check-ins, and zones to local database</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isLocal && (
+            <div className="mb-4 p-4 rounded-xl bg-muted/30 border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Google Sheets Sync</p>
+                    <p className="text-xs text-muted-foreground">Sync data to a Google Sheet</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSheetsEnabled(!sheetsEnabled)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    sheetsEnabled
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {sheetsEnabled ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                  {sheetsEnabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              {sheetsEnabled && (
+                <div className="mt-3 pt-3 border-t border-border space-y-3">
+                  <button
+                    onClick={handleSyncSheets}
+                    disabled={sheetsSyncing}
+                    className="flex items-center gap-3 w-full p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/60 transition-colors text-left disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      {sheetsSyncing ? (
+                        <RefreshCw className="w-5 h-5 text-emerald-600 animate-spin" />
+                      ) : (
+                        <Upload className="w-5 h-5 text-emerald-600" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">Sync All Data to Google Sheets</p>
+                      <p className="text-xs text-muted-foreground">Creates a new spreadsheet with members, zones, and check-ins</p>
+                    </div>
+                    {sheetsSyncing && (
+                      <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    )}
+                  </button>
+
+                  {sheetsUrl && (
+                    <a
+                      href={sheetsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open Spreadsheet
+                    </a>
+                  )}
+
+                  {sheetsError && (
+                    <p className="text-xs text-red-500">{sheetsError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => handleExport('sql')}
