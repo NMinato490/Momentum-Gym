@@ -135,13 +135,6 @@ export default function LoginPage() {
           </form>
         </motion.div>
 
-        <motion.p className="text-center text-muted-foreground text-xs mt-4" variants={itemVariants} custom={6}>
-          Need to create accounts?{' '}
-          <a href="/setup-auth" className="text-primary hover:text-primary/80 font-medium">
-            Setup Auth
-          </a>
-        </motion.p>
-
         <motion.p className="text-center text-muted-foreground text-sm mt-8" variants={itemVariants} custom={6}>
           © {new Date().getFullYear()} Momentum Gym. All rights reserved.
         </motion.p>
