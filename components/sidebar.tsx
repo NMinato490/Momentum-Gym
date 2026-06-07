@@ -57,7 +57,7 @@ export function Sidebar() {
     { id: 'overview', label: 'Dashboard', icon: BarChart3, path: '/', badge: null },
     { id: 'check-in', label: 'Check-In', icon: LogIn, path: '/check-in', badge: activeCount !== null ? String(activeCount) : null },
     { id: 'members', label: 'Customers', icon: Users, path: '/members', badge: null },
-    ...(isLocal ? [{ id: 'sync', label: 'Data Sync', icon: RefreshCw, path: '/sync', badge: null as string | null }] : []),
+    { id: 'sync', label: 'Data Sync', icon: RefreshCw, path: '/sync', badge: null },
     ...(userData?.role === 'superadmin' ? [{ id: 'admin-management', label: 'Admin Mgmt', icon: Shield, path: '/admin-management', badge: null as string | null }] : []),
   ]
 
