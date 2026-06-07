@@ -8,21 +8,23 @@ import { getInitials, getAvatarColor } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-function MemberSearchInput({ value, onChange }: { value: string; onChange: (memberId: string, label: string) => void }) {
+function MemberSearchInput({ value, onChange, action }: { value: string; onChange: (memberId: string, label: string) => void; action?: string }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<{ id: string; label: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { data: membersData } = useSWR('/api/members', fetcher)
-  const members: any[] = membersData?.data || []
+  const isCheckOut = action === 'check_out'
+  const { data: membersData } = useSWR(isCheckOut ? '/api/check-in?active_only=true&limit=1000' : '/api/members', fetcher)
+  const members: any[] = isCheckOut ? (membersData?.data || []) : (membersData?.data || [])
 
   const filtered = query.trim()
     ? members.filter((m: any) =>
         (m.first_name || '').toLowerCase().includes(query.toLowerCase()) ||
         (m.last_name || '').toLowerCase().includes(query.toLowerCase()) ||
-        (m.email || '').toLowerCase().includes(query.toLowerCase())
+        (m.email || '').toLowerCase().includes(query.toLowerCase()) ||
+        (m.zone_name || '').toLowerCase().includes(query.toLowerCase())
       ).slice(0, 50)
     : members
 
@@ -42,6 +44,11 @@ function MemberSearchInput({ value, onChange }: { value: string; onChange: (memb
     setQuery('')
     setOpen(false)
     onChange(member.member_id, label)
+  }
+
+  const zoneBadge = (member: any) => {
+    if (!isCheckOut || !member.zone_name) return null
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 ml-2">{member.zone_name}</span>
   }
 
   const handleClear = () => {
@@ -77,7 +84,7 @@ function MemberSearchInput({ value, onChange }: { value: string; onChange: (memb
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder="Type to search or browse members..."
+          placeholder={isCheckOut ? 'Search active check-ins...' : 'Type to search or browse members...'}
           className="w-full pl-10 pr-4 py-2 border border-input bg-card text-foreground rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors"
         />
       </div>
@@ -93,8 +100,9 @@ function MemberSearchInput({ value, onChange }: { value: string; onChange: (memb
               <span className={`w-8 h-8 rounded-full ${getAvatarColor(member.first_name, member.last_name)} flex items-center justify-center text-white text-xs font-semibold flex-shrink-0`}>
                 {getInitials(member.first_name, member.last_name)}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex items-center">
                 <span className="font-medium text-foreground">{member.first_name} {member.last_name}</span>
+                {zoneBadge(member)}
               </div>
             </button>
           ))}
@@ -174,6 +182,7 @@ export function CheckInForm() {
           </label>
           <MemberSearchInput
             value={memberId}
+            action={action}
             onChange={(id, label) => { setMemberId(id); setMemberLabel(label) }}
           />
         </div>
