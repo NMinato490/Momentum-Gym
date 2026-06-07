@@ -62,7 +62,21 @@ function rowsFromData(members: any[], checkIns: any[], zones: any[]) {
     ]),
   ];
 
-  return { memberRows, zoneRows, checkInRows };
+  const activeCheckIns = checkIns.filter((c: any) => !c.check_out_time);
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  const facilitySummaryRows = [
+    ['zone_id', 'zone_name', 'capacity', 'active_members', 'occupancy_percentage', 'density_status', 'total_equipment', 'equipment_in_use', 'last_updated'],
+    ...zones.map((z: any) => {
+      const active = activeCheckIns.filter((c: any) => c.zone_name === z.zone_name).length;
+      const pct = z.capacity > 0 ? ((active / z.capacity) * 100).toFixed(2) : '0.00';
+      const pctNum = parseFloat(pct);
+      const status = active === 0 ? 'Empty' : pctNum < 30 ? 'Low' : pctNum < 60 ? 'Medium' : pctNum < 90 ? 'High' : 'Full';
+      return [z.zone_id, z.zone_name, z.capacity, active, pct, status, z.total_equipment || 0, z.equipment_in_use || 0, now];
+    }),
+  ];
+
+  return { memberRows, zoneRows, checkInRows, facilitySummaryRows };
 }
 
 async function getOrCreateSpreadsheet(sheets: any) {
@@ -138,17 +152,18 @@ export async function POST() {
 
     const spreadsheetId = await getOrCreateSpreadsheet(sheets);
 
-    const { memberRows, zoneRows, checkInRows } = rowsFromData(members, checkIns, zones);
+    const { memberRows, zoneRows, checkInRows, facilitySummaryRows } = rowsFromData(members, checkIns, zones);
 
     await resetSheet(sheets, spreadsheetId, 'Members', memberRows);
     await resetSheet(sheets, spreadsheetId, 'Zones', zoneRows);
     await resetSheet(sheets, spreadsheetId, 'Check-Ins', checkInRows);
+    await resetSheet(sheets, spreadsheetId, 'Facility Summary', facilitySummaryRows);
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
 
     return NextResponse.json({
       success: true,
-      message: `Pushed ${members.length} members, ${zones.length} zones, ${checkIns.length} check-ins to Google Sheets`,
+      message: `Pushed ${members.length} members, ${zones.length} zones, ${checkIns.length} check-ins, ${zones.length} zone summaries to Google Sheets`,
       url: sheetUrl,
     });
   } catch (error: any) {
