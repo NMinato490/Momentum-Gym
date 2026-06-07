@@ -51,7 +51,9 @@ export async function POST() {
         zone_id INT AUTO_INCREMENT PRIMARY KEY,
         zone_name VARCHAR(100) NOT NULL UNIQUE,
         capacity INT NOT NULL,
-        description TEXT
+        description TEXT,
+        total_equipment INT NOT NULL DEFAULT 0,
+        equipment_in_use INT NOT NULL DEFAULT 0
       )
     `);
 
@@ -83,8 +85,8 @@ export async function POST() {
 
     for (const z of zones) {
       await conn.execute(
-        'INSERT INTO zones (zone_name, capacity, description) VALUES (?, ?, ?)',
-        [z.zone_name, z.capacity, z.description || null]
+        'INSERT INTO zones (zone_name, capacity, description, total_equipment, equipment_in_use) VALUES (?, ?, ?, ?, ?)',
+        [z.zone_name, z.capacity, z.description || null, z.total_equipment || 0, z.equipment_in_use || 0]
       );
     }
 
