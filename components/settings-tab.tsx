@@ -1,12 +1,13 @@
 'use client'
 
-import { Moon, Sun, Monitor } from 'lucide-react'
+import { Moon, Sun, Monitor, Database, Download } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
 
 export function SettingsTab() {
   const { theme, setTheme } = useTheme()
   const [copied, setCopied] = useState(false)
+  const [exporting, setExporting] = useState<'sql' | 'csv-members' | 'csv-checkins' | 'csv-zones' | null>(null)
 
   const handleCopyUid = async () => {
     try {
@@ -14,6 +15,32 @@ export function SettingsTab() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {}
+  }
+
+  const handleExport = async (format: 'sql' | 'csv', table?: string) => {
+    const key = format === 'sql' ? 'sql' : `csv-${table}` as any
+    setExporting(key)
+    try {
+      const params = format === 'sql' ? 'format=sql' : `format=csv&table=${table}`
+      const res = await fetch(`/api/export?${params}`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      if (format === 'sql') {
+        a.download = `momentum-gym-export-${Date.now()}.sql`
+      } else {
+        a.download = `${table}-${Date.now()}.csv`
+      }
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Export failed:', err)
+    } finally {
+      setExporting(null)
+    }
   }
 
   return (
@@ -72,6 +99,90 @@ export function SettingsTab() {
                 <p className="text-xs text-muted-foreground mt-0.5">{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="h-px bg-border" />
+
+        <div>
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Database className="w-5 h-5 text-primary" />
+            Data Export
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">Export all data to import into MySQL.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => handleExport('sql')}
+              disabled={exporting !== null}
+              className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border hover:border-primary/40 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Database className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">SQL Dump</p>
+                <p className="text-xs text-muted-foreground truncate">Single .sql file with all tables</p>
+              </div>
+              {exporting === 'sql' ? (
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin ml-auto" />
+              ) : (
+                <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
+              )}
+            </button>
+            <button
+              onClick={() => handleExport('csv', 'members')}
+              disabled={exporting !== null}
+              className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border hover:border-primary/40 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Download className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Members CSV</p>
+                <p className="text-xs text-muted-foreground truncate">members table as CSV</p>
+              </div>
+              {exporting === 'csv-members' ? (
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin ml-auto" />
+              ) : (
+                <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
+              )}
+            </button>
+            <button
+              onClick={() => handleExport('csv', 'check_ins')}
+              disabled={exporting !== null}
+              className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border hover:border-primary/40 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <Download className="w-5 h-5 text-emerald-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Check-ins CSV</p>
+                <p className="text-xs text-muted-foreground truncate">check_ins table as CSV</p>
+              </div>
+              {exporting === 'csv-checkins' ? (
+                <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin ml-auto" />
+              ) : (
+                <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
+              )}
+            </button>
+            <button
+              onClick={() => handleExport('csv', 'zones')}
+              disabled={exporting !== null}
+              className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border hover:border-primary/40 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <Download className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Zones CSV</p>
+                <p className="text-xs text-muted-foreground truncate">zones table as CSV</p>
+              </div>
+              {exporting === 'csv-zones' ? (
+                <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin ml-auto" />
+              ) : (
+                <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
+              )}
+            </button>
           </div>
         </div>
       </div>
