@@ -1,0 +1,7 @@
+-- Grant table-level permissions to service_role so the admin client can access tables
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+-- Also set default privileges so any NEW tables/sequences created in public get the same grants
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO service_role;
