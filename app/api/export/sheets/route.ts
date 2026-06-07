@@ -3,17 +3,35 @@ import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 
 function getAuth() {
+  const raw = process.env.GOOGLE_SHEETS_PRIVATE_KEY_BASE64;
   const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-  const privateKeyB64 = process.env.GOOGLE_SHEETS_PRIVATE_KEY_BASE64;
 
-  if (!clientEmail || !privateKeyB64) {
+  if (!raw) {
     throw new Error('Google Sheets credentials not configured');
   }
 
-  const privateKey = Buffer.from(privateKeyB64, 'base64').toString('utf-8');
+  const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+
+  let privateKey: string;
+  let email: string;
+
+  if (decoded.trimStart().startsWith('{')) {
+    const json = JSON.parse(decoded);
+    privateKey = json.private_key;
+    email = json.client_email;
+  } else {
+    privateKey = decoded;
+    email = clientEmail || '';
+  }
+
+  if (!email) {
+    throw new Error('Google Sheets credentials not configured');
+  }
+
+  privateKey = privateKey.replace(/\\n/g, '\n');
 
   return new google.auth.JWT({
-    email: clientEmail,
+    email,
     key: privateKey,
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
