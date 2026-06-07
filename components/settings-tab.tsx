@@ -223,8 +223,7 @@ export function SettingsTab() {
             </div>
           )}
 
-          {isLocal && (
-            <div className="mb-4 p-4 rounded-xl bg-muted/30 border border-border">
+          <div className="mb-4 p-4 rounded-xl bg-muted/30 border border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
@@ -287,7 +286,6 @@ export function SettingsTab() {
                 </div>
               )}
             </div>
-          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
