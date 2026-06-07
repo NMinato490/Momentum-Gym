@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 export function SettingsTab() {
   const { theme, setTheme } = useTheme()
   const [copied, setCopied] = useState(false)
-  const [exporting, setExporting] = useState<'sql' | 'csv-members' | 'csv-checkins' | 'csv-zones' | 'mysql' | null>(null)
+  const [exporting, setExporting] = useState<'sql' | 'csv-members' | 'csv-checkins' | 'csv-zones' | 'csv-facility-summary' | 'mysql' | null>(null)
   const [mysqlEnabled, setMysqlEnabled] = useState(false)
   const [mysqlConnected, setMysqlConnected] = useState<boolean | null>(null)
   const [mysqlPushing, setMysqlPushing] = useState(false)
@@ -356,6 +356,24 @@ export function SettingsTab() {
               </div>
               {exporting === 'csv-zones' ? (
                 <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin ml-auto" />
+              ) : (
+                <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
+              )}
+            </button>
+            <button
+              onClick={() => handleExport('csv', 'facility-summary')}
+              disabled={exporting !== null}
+              className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border hover:border-primary/40 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Download className="w-5 h-5 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Facility Summary CSV</p>
+                <p className="text-xs text-muted-foreground truncate">zone occupancy summary as CSV</p>
+              </div>
+              {exporting === 'csv-facility-summary' ? (
+                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin ml-auto" />
               ) : (
                 <Download className="w-5 h-5 text-muted-foreground ml-auto flex-shrink-0" />
               )}

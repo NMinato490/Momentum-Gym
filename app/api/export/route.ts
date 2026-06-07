@@ -50,13 +50,15 @@ export async function GET(request: NextRequest) {
       lines.push('  zone_id INT AUTO_INCREMENT PRIMARY KEY,');
       lines.push('  zone_name VARCHAR(100) NOT NULL UNIQUE,');
       lines.push('  capacity INT NOT NULL,');
-      lines.push('  description TEXT');
+      lines.push('  description TEXT,');
+      lines.push('  total_equipment INT NOT NULL DEFAULT 0,');
+      lines.push('  equipment_in_use INT NOT NULL DEFAULT 0');
       lines.push(');');
       lines.push('');
 
       for (const z of zones) {
         const desc = z.description ? `'${z.description.replace(/'/g, "\\'")}'` : 'NULL';
-        lines.push(`INSERT INTO zones (zone_name, capacity, description) VALUES ('${z.zone_name.replace(/'/g, "\\'")}', ${z.capacity}, ${desc});`);
+        lines.push(`INSERT INTO zones (zone_name, capacity, description, total_equipment, equipment_in_use) VALUES ('${z.zone_name.replace(/'/g, "\\'")}', ${z.capacity}, ${desc}, ${z.total_equipment || 0}, ${z.equipment_in_use || 0});`);
       }
       lines.push('');
 
@@ -80,6 +82,33 @@ export async function GET(request: NextRequest) {
         lines.push(`INSERT INTO check_ins (log_id, member_id, first_name, last_name, zone_name, check_in_time, check_out_time, duration_minutes) VALUES ('${c.log_id.replace(/'/g, "\\'")}', '${c.member_id.replace(/'/g, "\\'")}', '${c.first_name.replace(/'/g, "\\'")}', '${c.last_name.replace(/'/g, "\\'")}', '${c.zone_name.replace(/'/g, "\\'")}', '${c.check_in_time}', ${checkOut}, ${duration});`);
       }
       lines.push('');
+      lines.push('-- View: vw_gymfacilitysummary');
+      lines.push('CREATE OR REPLACE VIEW vw_gymfacilitysummary AS');
+      lines.push('SELECT');
+      lines.push('  z.zone_id,');
+      lines.push('  z.zone_name,');
+      lines.push('  z.capacity,');
+      lines.push('  COALESCE(ci.active_members, 0) AS active_members,');
+      lines.push('  ROUND(COALESCE(ci.active_members, 0) / z.capacity * 100, 2) AS occupancy_percentage,');
+      lines.push('  CASE');
+      lines.push('    WHEN COALESCE(ci.active_members, 0) = 0 THEN \'Empty\'');
+      lines.push('    WHEN COALESCE(ci.active_members, 0) / z.capacity < 0.3 THEN \'Low\'');
+      lines.push('    WHEN COALESCE(ci.active_members, 0) / z.capacity < 0.6 THEN \'Medium\'');
+      lines.push('    WHEN COALESCE(ci.active_members, 0) / z.capacity < 0.9 THEN \'High\'');
+      lines.push('    ELSE \'Full\'');
+      lines.push('  END AS density_status,');
+      lines.push('  z.total_equipment,');
+      lines.push('  z.equipment_in_use,');
+      lines.push('  NOW() AS last_updated');
+      lines.push('FROM zones z');
+      lines.push('LEFT JOIN (');
+      lines.push('  SELECT zone_name, COUNT(*) AS active_members');
+      lines.push('  FROM check_ins');
+      lines.push('  WHERE check_out_time IS NULL');
+      lines.push('  GROUP BY zone_name');
+      lines.push(') ci ON z.zone_name = ci.zone_name');
+      lines.push('ORDER BY z.zone_id;');
+      lines.push('');
 
       const sql = lines.join('\n');
       return new NextResponse(sql, {
@@ -90,9 +119,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // CSV - generate three files as a zip isn't feasible here,
-    // so we return members CSV by default, plus individual endpoints
     const table = request.nextUrl.searchParams.get('table') || 'members';
+
+    if (table === 'facility-summary') {
+      const activeCheckIns = checkIns.filter((c: any) => !c.check_out_time);
+      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const headers = ['zone_id', 'zone_name', 'capacity', 'active_members', 'occupancy_percentage', 'density_status', 'total_equipment', 'equipment_in_use', 'last_updated'];
+      const summaryRows = zones.map((z: any) => {
+        const active = activeCheckIns.filter((c: any) => c.zone_name === z.zone_name).length;
+        const pct = z.capacity > 0 ? ((active / z.capacity) * 100).toFixed(2) : '0.00';
+        const pctNum = parseFloat(pct);
+        const status = active === 0 ? 'Empty' : pctNum < 30 ? 'Low' : pctNum < 60 ? 'Medium' : pctNum < 90 ? 'High' : 'Full';
+        return [z.zone_id, z.zone_name, z.capacity, active, pct, status, z.total_equipment || 0, z.equipment_in_use || 0, now];
+      });
+      const csvLines = [headers.join(','), ...summaryRows.map((r: any[]) => r.join(','))];
+      return new NextResponse(csvLines.join('\n'), {
+        headers: { 'Content-Type': 'text/csv', 'Content-Disposition': `attachment; filename="facility-summary-${Date.now()}.csv"` },
+      });
+    }
 
     if (!['members', 'check_ins', 'zones'].includes(table)) {
       return NextResponse.json({ success: false, error: 'Invalid table' }, { status: 400 });
