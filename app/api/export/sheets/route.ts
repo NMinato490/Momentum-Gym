@@ -65,6 +65,56 @@ function rowsFromData(members: any[], checkIns: any[], zones: any[]) {
   return { memberRows, zoneRows, checkInRows };
 }
 
+async function getOrCreateSpreadsheet(sheets: any) {
+  const existingId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  if (existingId) return existingId;
+
+  try {
+    const res = await sheets.spreadsheets.create({
+      requestBody: {
+        properties: { title: 'Momentum-Gym' },
+        sheets: [
+          { properties: { title: 'Members' } },
+          { properties: { title: 'Zones' } },
+          { properties: { title: 'Check-Ins' } },
+        ],
+      },
+    });
+    return res.data.spreadsheetId;
+  } catch (e: any) {
+    const msg = e.message || '';
+    if (msg.includes('permission') || msg.includes('PERMISSION_DENIED')) {
+      throw new Error('The service account cannot create new spreadsheets. Create an empty spreadsheet, share it with the service account (' + (process.env.GOOGLE_SHEETS_CLIENT_EMAIL || 'check GOOGLE_SHEETS_CLIENT_EMAIL') + ') as Editor, then set GOOGLE_SHEETS_SPREADSHEET_ID to its ID.');
+    }
+    throw e;
+  }
+}
+
+async function resetSheet(sheets: any, spreadsheetId: string, title: string, rows: string[][]) {
+  const existing = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties' });
+  const sheet = existing.data.sheets?.find((s: any) => s.properties?.title === title);
+  if (sheet) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{ deleteSheet: { sheetId: sheet.properties.sheetId } }],
+      },
+    });
+  }
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{ addSheet: { properties: { title } } }],
+    },
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${title}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: rows },
+  });
+}
+
 export async function POST() {
   try {
     const supabase = createAdminClient();
@@ -86,41 +136,13 @@ export async function POST() {
     const auth = getAuth();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const spreadsheet = await sheets.spreadsheets.create({
-      requestBody: {
-        properties: { title: 'Momentum-Gym' },
-        sheets: [
-          { properties: { title: 'Members' } },
-          { properties: { title: 'Zones' } },
-          { properties: { title: 'Check-Ins' } },
-        ],
-      },
-    });
-
-    const spreadsheetId = spreadsheet.data.spreadsheetId;
+    const spreadsheetId = await getOrCreateSpreadsheet(sheets);
 
     const { memberRows, zoneRows, checkInRows } = rowsFromData(members, checkIns, zones);
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Members!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: memberRows },
-    });
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Zones!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: zoneRows },
-    });
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Check-Ins!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: checkInRows },
-    });
+    await resetSheet(sheets, spreadsheetId, 'Members', memberRows);
+    await resetSheet(sheets, spreadsheetId, 'Zones', zoneRows);
+    await resetSheet(sheets, spreadsheetId, 'Check-Ins', checkInRows);
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
 
@@ -131,10 +153,6 @@ export async function POST() {
     });
   } catch (error: any) {
     console.error('Google Sheets sync error:', error);
-    const msg = error.message || '';
-    const hint = msg.includes('permission')
-      ? 'Enable the Google Sheets API in Google Cloud Console (APIs & Services > Library > Google Sheets API), then ensure the service account has permission.'
-      : msg;
-    return NextResponse.json({ success: false, error: hint }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || 'Unknown error' }, { status: 500 });
   }
 }
