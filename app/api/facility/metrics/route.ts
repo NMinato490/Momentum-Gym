@@ -1,9 +1,11 @@
 import { createAdminClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();
+    const { searchParams } = new URL(request.url);
+    const range = searchParams.get('range') || '7d';
 
     // Active members count
     const { count: activeMembers, error: membersErr } = await supabase
@@ -76,26 +78,59 @@ export async function GET() {
 
     const totalCapacity = summary.reduce((acc: number, z: { capacity: number }) => acc + z.capacity, 0);
 
-    // Peak hours: aggregate today's check-ins by hour
-    const { data: todayCheckIns, error: todayErr } = await supabase
+    // Peak hours: aggregate check-ins by hour over the selected range
+    const rangeStart = new Date();
+    if (range === 'month') {
+      rangeStart.setDate(1);
+      rangeStart.setHours(0, 0, 0, 0);
+    } else if (range === '30d') {
+      rangeStart.setDate(rangeStart.getDate() - 30);
+      rangeStart.setHours(0, 0, 0, 0);
+    } else if (range === '1y') {
+      rangeStart.setMonth(0, 1); // January 1st of current year
+      rangeStart.setHours(0, 0, 0, 0);
+    } else {
+      rangeStart.setDate(rangeStart.getDate() - 7);
+      rangeStart.setHours(0, 0, 0, 0);
+    }
+
+    const { data: rangeCheckIns, error: rangeErr } = await supabase
       .from('check_ins')
       .select('check_in_time')
-      .gte('check_in_time', todayStart.toISOString());
+      .gte('check_in_time', rangeStart.toISOString());
 
-    if (todayErr) throw todayErr;
+    if (rangeErr) throw rangeErr;
 
-    const hourBuckets: Record<number, number> = {};
-    for (let h = 6; h <= 22; h++) hourBuckets[h] = 0;
+    const trendData: any[] = [];
+    if (range === '7d' || range === '30d' || range === 'month') {
+      const days = range === 'month' ? new Date().getDate() : (range === '30d' ? 30 : 7);
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const label = range === '7d' ? d.toLocaleDateString('en-US', { weekday: 'short' }) : d.getDate().toString();
+        // Use local timezone string to match dates accurately
+        const localDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        trendData.push({ label, check_ins: 0, dateStr: localDateStr });
+      }
 
-    (todayCheckIns || []).forEach((row: { check_in_time: string }) => {
-      const hour = new Date(row.check_in_time).getHours();
-      if (hourBuckets[hour] !== undefined) hourBuckets[hour]++;
-    });
-
-    const peakHours = Array.from({ length: 17 }, (_, i) => i + 6).map(hour => ({
-      hour,
-      check_ins: hourBuckets[hour] || 0,
-    }));
+      (rangeCheckIns || []).forEach((row: { check_in_time: string }) => {
+        const d = new Date(row.check_in_time);
+        const localDateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const bucket = trendData.find(t => t.dateStr === localDateStr);
+        if (bucket) bucket.check_ins++;
+      });
+    } else if (range === '1y') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      for (let i = 0; i < new Date().getMonth() + 1; i++) {
+        trendData.push({ label: months[i], check_ins: 0, monthIdx: i });
+      }
+      (rangeCheckIns || []).forEach((row: { check_in_time: string }) => {
+        const m = new Date(row.check_in_time).getMonth();
+        const bucket = trendData.find(t => t.monthIdx === m);
+        if (bucket) bucket.check_ins++;
+      });
+    }
 
     // Trends: compare this month to last month
     const now = new Date();
@@ -148,7 +183,8 @@ export async function GET() {
         totalCapacity,
         activeCheckIns: activeCheckIns || 0,
         newToday: newToday || 0,
-        peakHours,
+        trendData,
+        totalCheckIns: rangeCheckIns?.length || 0,
         trends: {
           customers: `${membersTrend.startsWith('-') ? '' : '+'}${membersTrend}%`,
           capacity: `${activeTrend.startsWith('-') ? '' : '+'}${activeTrend}%`,

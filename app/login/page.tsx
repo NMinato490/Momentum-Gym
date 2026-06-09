@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { motion } from 'framer-motion'
+import { logLoginEvent } from '@/lib/logging'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,6 +23,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
+        logLoginEvent({ email, action: 'login_failed', metadata: { reason: error.message } })
         if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please try again.')
         } else if (error.message.includes('Email not confirmed')) {
@@ -33,6 +35,7 @@ export default function LoginPage() {
         router.push('/')
       }
     } catch (err: any) {
+      logLoginEvent({ email, action: 'login_failed', metadata: { reason: err.message } })
       setError(err.message || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)

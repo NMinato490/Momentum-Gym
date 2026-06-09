@@ -13,7 +13,7 @@ export default function SetupAuthPage() {
   const handleSetupAccounts = async () => {
     setIsLoading(true)
     setStatus('loading')
-    setMessage('Creating Firebase Auth accounts...')
+    setMessage('Creating accounts...')
 
     try {
       const response = await fetch('/api/auth/setup-accounts', {
@@ -27,7 +27,7 @@ export default function SetupAuthPage() {
 
       if (data.success) {
         setStatus('success')
-        setMessage('Firebase Auth accounts created successfully!')
+        setMessage('Accounts created successfully!')
         setResults(data.accounts || [])
       } else {
         setStatus('error')

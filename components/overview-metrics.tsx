@@ -9,7 +9,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function OverviewMetrics() {
   const [timeRange, setTimeRange] = useState('7d')
-  const { data, isLoading } = useSWR('/api/facility/metrics', fetcher, {
+  const { data, isLoading } = useSWR(`/api/facility/metrics?range=${timeRange}`, fetcher, {
     refreshInterval: 10000,
   })
 

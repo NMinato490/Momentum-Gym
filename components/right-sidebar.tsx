@@ -26,7 +26,7 @@ export function RightSidebar() {
   ]
 
   return (
-    <aside className="w-80 bg-background border-l border-border flex flex-col h-[calc(100vh-6rem)] overflow-y-auto pb-8 pr-8">
+    <aside className="w-80 bg-background border-l border-border flex flex-col h-[calc(100vh-6rem)] overflow-y-auto pb-8 px-8">
       {/* Popular Zones */}
       <div className="bg-card rounded-3xl p-6 border border-border shadow-sm mb-6">
         <div className="flex items-center justify-between mb-6">

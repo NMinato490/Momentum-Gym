@@ -1,8 +1,9 @@
 'use client'
 
-import { Moon, Sun, Monitor, Database, Download, Upload, ToggleLeft, ToggleRight, RefreshCw, FileSpreadsheet, ExternalLink } from 'lucide-react'
+import { Moon, Sun, Monitor, Database, Download, Upload, ToggleLeft, ToggleRight, RefreshCw, FileSpreadsheet, ExternalLink, Clock } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState, useEffect } from 'react'
+import { getConfig, setConfig } from '@/lib/logging'
 
 export function SettingsTab() {
   const { theme, setTheme } = useTheme()
@@ -15,6 +16,9 @@ export function SettingsTab() {
   const [sheetsSyncing, setSheetsSyncing] = useState(false)
   const [sheetsUrl, setSheetsUrl] = useState<string | null>(null)
   const [sheetsError, setSheetsError] = useState<string | null>(null)
+  const [sheetsAutoInterval, setSheetsAutoInterval] = useState('5')
+  const [sheetsAutoIntervalInput, setSheetsAutoIntervalInput] = useState('5')
+  const [sheetsAutoSaving, setSheetsAutoSaving] = useState(false)
   const [isLocal] = useState(() =>
     typeof window !== 'undefined' &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -35,6 +39,24 @@ export function SettingsTab() {
     const interval = setInterval(checkMysql, 10000)
     return () => clearInterval(interval)
   }, [isLocal, mysqlEnabled])
+
+  useEffect(() => {
+    getConfig('sheets_auto_sync_interval').then(val => {
+      if (val) {
+        setSheetsAutoInterval(val)
+        setSheetsAutoIntervalInput(val)
+      }
+    })
+  }, [])
+
+  const handleApplySheetsInterval = async () => {
+    const mins = parseInt(sheetsAutoIntervalInput, 10)
+    if (isNaN(mins) || mins < 1) return
+    setSheetsAutoSaving(true)
+    await setConfig('sheets_auto_sync_interval', String(mins))
+    setSheetsAutoInterval(String(mins))
+    setSheetsAutoSaving(false)
+  }
 
   const handleCopyUid = async () => {
     try {
@@ -165,6 +187,37 @@ export function SettingsTab() {
 
         {isLocal && <div className="h-px bg-border" />}
 
+        {isLocal && (
+          <div>
+            <h3 className="text-lg font-semibold text-foreground mb-4">System Config</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Auto-Sync Interval</p>
+                  <p className="text-xs text-muted-foreground">Supabase → MySQL sync frequency (env: SYNC_INTERVAL_MINUTES)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono text-foreground bg-background px-3 py-1 rounded-lg border border-border">
+                    {process.env.NEXT_PUBLIC_SYNC_INTERVAL || '5'} min
+                  </span>
+                </div>
+              </div>
+              <a
+                href="/sync"
+                className="flex items-center justify-between p-4 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">Sync Dashboard</p>
+                  <p className="text-xs text-muted-foreground">View auto-sync status and manual override</p>
+                </div>
+                <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              </a>
+            </div>
+          </div>
+        )}
+
+        {isLocal && <div className="h-px bg-border" />}
+
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Database className="w-5 h-5 text-primary" />
@@ -283,6 +336,37 @@ export function SettingsTab() {
                   {sheetsError && (
                     <p className="text-xs text-red-500">{sheetsError}</p>
                   )}
+                </div>
+              )}
+
+              {isLocal && sheetsEnabled && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-emerald-500" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Auto-Sync Interval</p>
+                        <p className="text-xs text-muted-foreground">Automatically sync to Google Sheets every N minutes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={sheetsAutoIntervalInput}
+                        onChange={e => setSheetsAutoIntervalInput(e.target.value)}
+                        className="w-16 px-2 py-1.5 text-sm text-center font-mono rounded-lg border border-border bg-background text-foreground"
+                      />
+                      <span className="text-sm text-muted-foreground">min</span>
+                      <button
+                        onClick={handleApplySheetsInterval}
+                        disabled={sheetsAutoSaving}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50"
+                      >
+                        {sheetsAutoSaving ? 'Saving...' : 'Apply'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

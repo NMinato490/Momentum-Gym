@@ -1,5 +1,35 @@
 import { createAdminClient } from '@/lib/supabase-server';
+import { formatDateTime } from '@/lib/utils';
+import { createConnection } from 'mysql2/promise';
 import { NextRequest, NextResponse } from 'next/server';
+
+async function writeCheckInToMySQL(logId: string, memberId: string, firstName: string, lastName: string, zoneName: string, checkInTime: string) {
+  try {
+    const conn = await createConnection({ host: '127.0.0.1', port: 3306, user: 'root', password: '', connectTimeout: 3000 });
+    await conn.query('USE momentum_gym');
+    await conn.execute(
+      'INSERT INTO check_ins (log_id, member_id, first_name, last_name, zone_name, check_in_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [logId, memberId, firstName, lastName, zoneName, checkInTime, formatDateTime()]
+    );
+    await conn.end();
+  } catch (e) {
+    console.warn('[MySQL] check-in write skipped:', (e as Error).message);
+  }
+}
+
+async function writeCheckOutToMySQL(logId: string, checkOutTime: string, durationMinutes: number) {
+  try {
+    const conn = await createConnection({ host: '127.0.0.1', port: 3306, user: 'root', password: '', connectTimeout: 3000 });
+    await conn.query('USE momentum_gym');
+    await conn.execute(
+      'UPDATE check_ins SET check_out_time = ?, duration_minutes = ? WHERE log_id = ?',
+      [checkOutTime, durationMinutes, logId]
+    );
+    await conn.end();
+  } catch (e) {
+    console.warn('[MySQL] check-out write skipped:', (e as Error).message);
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,6 +74,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { member_id, zone_id, action, first_name, last_name } = body;
 
+    const now = formatDateTime();
+
     if (action === 'check_in') {
       const logId = `L${Date.now()}`;
       const { error } = await supabase.from('check_ins').insert({
@@ -52,12 +84,15 @@ export async function POST(request: Request) {
         first_name: first_name || 'Unknown',
         last_name: last_name || 'User',
         zone_name: zone_id,
-        check_in_time: new Date().toISOString(),
+        check_in_time: now,
         check_out_time: null,
         duration_minutes: null,
       });
 
       if (error) throw error;
+
+      writeCheckInToMySQL(logId, member_id, first_name || 'Unknown', last_name || 'User', zone_id, now);
+
       return NextResponse.json({ success: true, message: `${first_name} ${last_name} checked in to ${zone_id}` });
     } else {
       const { data, error: findError } = await supabase
@@ -73,16 +108,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'No active check-in found for this member' }, { status: 404 });
       }
 
-      const checkInTime = new Date(data.check_in_time);
-      const checkOutTime = new Date();
-      const durationMinutes = Math.round((checkOutTime.getTime() - checkInTime.getTime()) / 60000);
+      const durationMinutes = Math.round(Math.abs((Date.now() - new Date(data.check_in_time).getTime()) / 60000)) || 0;
 
       const { error: updateError } = await supabase
         .from('check_ins')
-        .update({ check_out_time: checkOutTime.toISOString(), duration_minutes: durationMinutes })
+        .update({ check_out_time: now, duration_minutes: durationMinutes })
         .eq('log_id', data.log_id);
 
       if (updateError) throw updateError;
+
+      writeCheckOutToMySQL(data.log_id, now, durationMinutes);
+
       return NextResponse.json({ success: true, message: `${first_name} ${last_name} checked out (${durationMinutes} min)` });
     }
   } catch (error: any) {

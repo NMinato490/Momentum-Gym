@@ -7,7 +7,7 @@ A **production-ready, professional gym management dashboard** with complete auth
 ## Key Accomplishments
 
 ### 1. Complete Authentication System
-- Firebase Authentication (Email/Password)
+- Supabase Authentication (Email/Password)
 - Superadmin creation workflow
 - Role-based access control (Superadmin, Admin, Staff, User)
 - Secure session management
@@ -26,7 +26,7 @@ A **production-ready, professional gym management dashboard** with complete auth
 - MySQL (XAMPP) for operational data
   - Members, zones, equipment, check-in logs
   - Real-time facility summary view
-- Firebase Firestore for user accounts and roles
+
 - Automatic database initialization on first load
 
 ### 4. Core Features
@@ -38,7 +38,7 @@ A **production-ready, professional gym management dashboard** with complete auth
 
 ### 5. Backend Infrastructure
 - 7 REST API endpoints for all operations
-- Server-side authentication with Firebase Admin SDK
+- Server-side authentication with Supabase
 - MySQL query optimization with connection pooling
 - Error handling and validation
 - Environment-based configuration
@@ -74,7 +74,7 @@ context/
 
 lib/
 ├── db.ts                             # MySQL client
-└── firebase.ts                       # Firebase SDK
+
 
 public/
 └── logo.png                          # Momentum Gym logo
@@ -93,13 +93,13 @@ public/
 
 ### Backend
 - **Next.js API Routes** - RESTful endpoints
-- **Firebase Admin SDK** - Authentication
+- **Supabase** - Authentication
 - **mysql2** - Database driver
 - **Node.js** - Runtime
 
 ### Databases
 - **MySQL (XAMPP)** - Operational data
-- **Firebase Firestore** - User accounts & roles
+
 
 ### Deployment Ready
 - Environment variable configuration
@@ -114,13 +114,8 @@ public/
 pnpm install
 ```
 
-### 2. Configure Firebase
-Follow [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) to:
-- Create Firebase project
-- Enable Email/Password auth
-- Create Firestore database
-- Get service account credentials
-- Add to .env.local
+### 2. Configure Supabase
+Create a Supabase project, get your project URL and anon key, enable Email/Password auth, and add to `.env.local`.
 
 ### 3. Configure MySQL
 Update `.env.local`:
@@ -164,14 +159,14 @@ pnpm dev
 
 ### ✅ Documentation
 - [README.md](./README.md) - Project overview
-- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) - Firebase guide
+
 - [SETUP.md](./SETUP.md) - MySQL guide
 - [INTEGRATION.md](./INTEGRATION.md) - Architecture deep-dive
 
 ## What Needs to Be Completed
 
 ### Before Going Live
-1. **Set up Firebase credentials** (see FIREBASE_SETUP.md)
+1. **Set up Supabase credentials**
 2. **Configure MySQL** (see SETUP.md)
 3. **Create superadmin account** via setup page
 4. **Test all workflows** (check-in, member mgmt)
@@ -188,7 +183,7 @@ pnpm dev
 
 ## Key Decisions Made
 
-### Firebase for Auth, MySQL for Operations
+### Supabase for Auth, MySQL for Operations
 - **Why**: Separates concerns, scalable, industry standard
 - **Benefit**: Easy to migrate databases, auth is always reliable
 
@@ -206,7 +201,7 @@ pnpm dev
 
 ## Performance Characteristics
 
-- **Initial Load**: ~2-3 seconds (depends on Firebase config)
+- **Initial Load**: ~2-3 seconds
 - **Check-in Response**: <500ms
 - **Dashboard Updates**: Real-time with 5-second refresh
 - **Concurrent Users**: Easily handles 100+ with current setup
@@ -214,11 +209,10 @@ pnpm dev
 
 ## Security Features
 
-- Firebase authentication with password hashing
+- Supabase authentication
 - Server-side route protection
 - HTTPS recommended for production
 - Environment variables for secrets
-- Firestore security rules
 - SQL parameter binding (prevents injection)
 - Role-based access control
 
@@ -240,11 +234,11 @@ pnpm dev
 
 1. **Read the documentation**
    - Start with README.md
-   - Follow FIREBASE_SETUP.md
+    - Follow SETUP.md
    - Check SETUP.md for MySQL
 
 2. **Configure your environment**
-   - Create Firebase project
+   - Set up Supabase project
    - Start MySQL server
    - Add .env.local variables
 
@@ -267,7 +261,7 @@ pnpm dev
 
 ## Support Resources
 
-- [Firebase Documentation](https://firebase.google.com/docs)
+- [Supabase Documentation](https://supabase.com/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [MySQL Documentation](https://dev.mysql.com/doc/)
 - [Tailwind CSS](https://tailwindcss.com/docs)
@@ -296,7 +290,7 @@ You'll know everything is working when:
 - **UI/Dashboard**: Completed
 - **Testing**: Ready for manual testing
 - **Documentation**: Completed
-- **Production Setup**: Awaiting your Firebase config
+- **Production Setup**: Awaiting your Supabase config
 
 ## Final Notes
 
@@ -309,7 +303,7 @@ This is a **complete, functional system** ready for real-world use. All the hard
 - ✅ Real-time updates
 
 You just need to:
-1. Configure Firebase credentials
+1. Configure Supabase credentials
 2. Start MySQL
 3. Create your first admin account
 4. Start tracking your gym's usage!

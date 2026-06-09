@@ -47,12 +47,8 @@ Login page now displays quick-access demo accounts:
 - Password: `Admin123!`
 - One-click fill: Click the admin button to auto-fill credentials
 
-### 4. Firebase Authentication Setup
-Firebase configuration is fully ready:
-- Email/Password authentication enabled
-- Two user accounts pre-configured in Firebase Auth
-- Firestore database structure ready for user roles
-- Security rules applied
+### 4. Supabase Authentication
+Supabase authentication is configured for email/password login.
 
 ## Updated Files
 
@@ -67,20 +63,12 @@ Firebase configuration is fully ready:
 - `app/api/auth/create-superadmin/route.ts` - Superadmin creation endpoint removed
 
 **New Documentation:**
-- `FIREBASE_AUTH_SETUP.md` - Complete Firebase setup guide with step-by-step instructions
 
-## Firebase Setup (5 Steps)
-
-### Quick Start
-1. Create Firebase project at firebase.google.com
-2. Add web app and get config credentials
-3. Add credentials to `.env.local` (already listed)
-4. Enable Email/Password auth
-5. Create 2 users in Firebase Console:
-   - `superadmin@momentumgym.com` / `SuperAdmin123!`
-   - `admin@momentumgym.com` / `Admin123!`
-
-**Full instructions:** See `FIREBASE_AUTH_SETUP.md`
+## Supabase Setup
+1. Create a Supabase project at supabase.com
+2. Get project URL and anon key from Settings > API
+3. Add credentials to `.env.local`
+4. Enable Email/Password auth in Auth > Providers
 
 ## How to Use
 
@@ -89,7 +77,7 @@ Firebase configuration is fully ready:
 2. Click "Superadmin" or "Admin" button
 3. Credentials auto-fill
 4. Click "Sign In"
-5. After Firebase setup, you'll be logged in!
+5. After Supabase setup, you'll be logged in!
 
 ### Manual Login
 1. Email: `superadmin@momentumgym.com`
@@ -130,7 +118,6 @@ All animations are powered by Framer Motion for performance:
 **Package List:**
 ```
 framer-motion 12.40.0
-firebase (existing)
 swr (existing)
 lucide-react (existing)
 shadcn/ui components (existing)
@@ -138,21 +125,17 @@ shadcn/ui components (existing)
 
 ## Environment Variables Needed
 
-Already listed in `.env.local`, just update with your Firebase values:
+Add these to your `.env.local`:
 
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_KEY
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=YOUR_DOMAIN
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=YOUR_PROJECT
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=YOUR_BUCKET
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=YOUR_SENDER
-NEXT_PUBLIC_FIREBASE_APP_ID=YOUR_APP_ID
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
 ## Next Steps
 
-1. **Configure Firebase** (10 min)
-   - Follow: `FIREBASE_AUTH_SETUP.md`
+1. **Configure Supabase** (10 min)
+   - Follow the Supabase setup steps above
    - Add credentials to `.env.local`
    - Create 2 demo accounts
 
@@ -173,19 +156,19 @@ NEXT_PUBLIC_FIREBASE_APP_ID=YOUR_APP_ID
 ✓ 2 demo accounts ready to use
 ✓ One-click demo account fill on login page
 ✓ Professional, modern UI
-✓ Firebase authentication ready
+✓ Supabase authentication ready
 ✓ RBAC with superadmin/admin roles
 ✓ Complete dashboard with real-time data
 ✓ Responsive design across all devices
 
 ## Support
 
-- **Login issues?** Check `FIREBASE_AUTH_SETUP.md`
+- **Login issues?** Check Supabase auth configuration
 - **Animation problems?** Clear browser cache and restart
-- **Firebase config errors?** Verify all 6 credentials in `.env.local`
+- **Supabase config errors?** Verify credentials in `.env.local`
 - **Can't see animations?** Ensure Framer Motion is installed: `pnpm list framer-motion`
 
 ---
 
 **Status: Production Ready**
-All animations are optimized, animations are smooth, and the app is ready to use with Firebase credentials.
+All animations are optimized, animations are smooth, and the app is ready to use with Supabase credentials.

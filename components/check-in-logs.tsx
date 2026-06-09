@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Clock, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Clock, Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { getInitials, getAvatarColor } from '@/lib/utils'
+import { createClient } from '@/lib/supabase'
 
 export function CheckInLogs() {
   const [search, setSearch] = useState('')
@@ -10,17 +11,19 @@ export function CheckInLogs() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
+  const [showActiveOnly, setShowActiveOnly] = useState(true)
   const limit = 10
   const totalPages = Math.ceil(total / limit)
   const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
-  const fetchLogs = useCallback(async (q: string, p: number) => {
+  const fetchLogs = useCallback(async (q: string, p: number, activeOnly: boolean) => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
       if (q.trim()) params.set('search', q.trim())
       params.set('page', String(p))
       params.set('limit', String(limit))
+      if (activeOnly) params.set('active_only', 'true')
       const res = await fetch(`/api/check-in?${params.toString()}`)
       const data = await res.json()
       setLogs(data.data || [])
@@ -35,28 +38,68 @@ export function CheckInLogs() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    const timer = setTimeout(() => { setPage(1); fetchLogs(search, 1) }, 300)
+    const timer = setTimeout(() => { setPage(1); fetchLogs(search, 1, showActiveOnly) }, 300)
     return () => clearTimeout(timer)
-  }, [search, fetchLogs])
+  }, [search, fetchLogs, showActiveOnly])
 
   useEffect(() => {
-    fetchLogs(search, page)
+    fetchLogs(search, page, showActiveOnly)
   }, [page])
 
   useEffect(() => {
-    fetchLogs('', 1)
+    fetchLogs('', 1, showActiveOnly)
   }, [])
 
   useEffect(() => {
-    const interval = setInterval(() => fetchLogs(search, page), 15000)
+    const interval = setInterval(() => fetchLogs(search, page, showActiveOnly), 15000)
     return () => clearInterval(interval)
-  }, [search, page, fetchLogs])
+  }, [search, page, fetchLogs, showActiveOnly])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel('check_ins_realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'check_ins' },
+        () => fetchLogs(search, page, showActiveOnly)
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [search, page, fetchLogs, showActiveOnly])
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-sm">
       <div className="p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-foreground">Check-In Logs</h2>
+            <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-foreground">Check-In Logs</h2>
+            <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5 border border-border">
+              <button
+                onClick={() => setShowActiveOnly(true)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  showActiveOnly ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setShowActiveOnly(false)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  !showActiveOnly ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                All
+              </button>
+            </div>
+            <button
+              onClick={() => fetchLogs(search, page, showActiveOnly)}
+              disabled={isLoading}
+              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -101,7 +144,7 @@ export function CheckInLogs() {
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                  {search ? 'No matching check-in records found' : 'No check-in records yet'}
+                  {search ? 'No matching check-in records found' : showActiveOnly ? 'No active check-ins' : 'No check-in records'}
                 </td>
               </tr>
             ) : (

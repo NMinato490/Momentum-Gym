@@ -8,7 +8,7 @@ import { getInitials, getAvatarColor } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-function MemberSearchInput({ value, onChange, action }: { value: string; onChange: (memberId: string, label: string) => void; action?: string }) {
+function MemberSearchInput({ value, onChange, action }: { value: string; onChange: (memberId: string, label: string, zoneName?: string) => void; action?: string }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<{ id: string; label: string } | null>(null)
@@ -16,8 +16,21 @@ function MemberSearchInput({ value, onChange, action }: { value: string; onChang
   const containerRef = useRef<HTMLDivElement>(null)
 
   const isCheckOut = action === 'check_out'
-  const { data: membersData } = useSWR(isCheckOut ? '/api/check-in?active_only=true&limit=1000' : '/api/members', fetcher)
-  const members: any[] = isCheckOut ? (membersData?.data || []) : (membersData?.data || [])
+  const { data: membersData } = useSWR('/api/members?limit=1000', fetcher)
+  const { data: activeCheckInsData } = useSWR('/api/check-in?active_only=true&limit=1000', fetcher)
+  
+  const allMembers = membersData?.data || []
+  const activeCheckIns = activeCheckInsData?.data || []
+
+  const activeCheckInMap = new Map()
+  activeCheckIns.forEach((c: any) => activeCheckInMap.set(c.member_id, c.zone_name))
+
+  const members: any[] = isCheckOut 
+    ? activeCheckIns 
+    : allMembers.map((m: any) => ({
+        ...m,
+        zone_name: activeCheckInMap.get(m.member_id) || undefined
+      }))
 
   const filtered = query.trim()
     ? members.filter((m: any) =>
@@ -43,11 +56,11 @@ function MemberSearchInput({ value, onChange, action }: { value: string; onChang
     setSelected({ id: member.member_id, label })
     setQuery('')
     setOpen(false)
-    onChange(member.member_id, label)
+    onChange(member.member_id, label, member.zone_name)
   }
 
   const zoneBadge = (member: any) => {
-    if (!isCheckOut || !member.zone_name) return null
+    if (!member.zone_name) return null
     return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 ml-2">{member.zone_name}</span>
   }
 
@@ -128,10 +141,11 @@ export function CheckInForm() {
   const { data: zonesData } = useSWR('/api/zones', fetcher)
 
   const zones = zonesData?.data || []
+  const isCheckOut = action === 'check_out'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!memberId || !zoneName) {
+    if (!memberId || (!isCheckOut && !zoneName)) {
       setFeedback('Please fill all fields')
       return
     }
@@ -183,7 +197,17 @@ export function CheckInForm() {
           <MemberSearchInput
             value={memberId}
             action={action}
-            onChange={(id, label) => { setMemberId(id); setMemberLabel(label) }}
+            onChange={(id, label, detectedZone) => {
+              setMemberId(id);
+              setMemberLabel(label);
+              if (detectedZone) {
+                // Member is currently checked in — auto-switch to check out
+                setAction('check_out');
+                setZoneName(detectedZone);
+              } else if (!isCheckOut) {
+                setZoneName('');
+              }
+            }}
           />
         </div>
 
@@ -194,10 +218,11 @@ export function CheckInForm() {
           <select
             value={zoneName}
             onChange={(e) => setZoneName(e.target.value)}
-            required
-            className="w-full px-4 py-2 border border-input bg-card text-foreground rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors"
+            required={!isCheckOut}
+            disabled={isCheckOut}
+            className="w-full px-4 py-2 border border-input bg-card text-foreground rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <option value="">Select zone...</option>
+            <option value="">{isCheckOut ? 'Auto-detected on check-out' : 'Select zone...'}</option>
             {zones.map((zone: any) => (
               <option key={zone.zone_id} value={zone.zone_name}>
                 {zone.zone_name} ({zone.active_count}/{zone.capacity})
@@ -252,7 +277,7 @@ export function CheckInForm() {
 
         <Button
           type="submit"
-          disabled={isLoading || !memberId || !zoneName}
+          disabled={isLoading || !memberId || (!isCheckOut && !zoneName)}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Processing...' : action === 'check_in' ? 'Check In' : 'Check Out'}

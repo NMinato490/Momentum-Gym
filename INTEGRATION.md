@@ -2,7 +2,7 @@
 
 ## Complete System Architecture
 
-Momentum Gym is a hybrid system that uses **Firebase** for authentication and **MySQL** for gym operational data.
+Momentum Gym uses **Supabase** for authentication and **MySQL** for gym operational data.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -11,7 +11,7 @@ Momentum Gym is a hybrid system that uses **Firebase** for authentication and **
 └────────────────┬────────────────────────────────┬───────────┘
                  │                                 │
         ┌────────▼─────────┐           ┌──────────▼──────────┐
-        │  Firebase Auth   │           │   SWR Data Cache    │
+        │  Supabase Auth   │           │   SWR Data Cache    │
         │ (Sign In/Up)     │           │  (Stale Revalidate) │
         └────────┬─────────┘           └──────────┬──────────┘
                  │                                 │
@@ -26,20 +26,20 @@ Momentum Gym is a hybrid system that uses **Firebase** for authentication and **
          └─────────┬──────────────────┬─────────────────────┘
                    │                  │
         ┌──────────▼────────┐  ┌─────▼──────────────┐
-        │  Firebase Admin   │  │  MySQL Connection  │
-        │  SDK              │  │  Pool (mysql2)     │
-        │  - Auth API       │  │  - gym_management  │
-        │  - Firestore API  │  │    database        │
+        │  Supabase         │  │  MySQL Connection  │
+        │  - Auth API       │  │  Pool (mysql2)     │
+        │  - Database API   │  │  - gym_management  │
+        │                   │  │    database        │
         └──────────┬────────┘  └─────┬──────────────┘
                    │                  │
         ┌──────────▼────────┐  ┌─────▼──────────────┐
-        │   Firebase Cloud  │  │   XAMPP MySQL      │
-        │   - Auth          │  │   - users (Firestore
-        │   - Firestore DB  │  │   - members        │
-        │   - Storage       │  │   - zones          │
-        │   - Cloud Funcs   │  │   - equipment      │
-        │   (optional)      │  │   - check_in_logs  │
-        └───────────────────┘  │   - vw_..._summary │
+        │   Supabase        │  │   XAMPP MySQL      │
+        │   - Auth          │  │   - users          │
+        │   - Database      │  │   - members        │
+        └───────────────────┘  │   - zones          │
+                               │   - equipment      │
+                               │   - check_in_logs  │
+                               │   - vw_..._summary │
                                └────────────────────┘
 ```
 
@@ -49,9 +49,9 @@ Momentum Gym is a hybrid system that uses **Firebase** for authentication and **
 ```
 User → Login Page
    ↓
-[Email/Password] → Firebase Auth API
-   ↓
-Auth Success → Create Session + Fetch User Doc from Firestore
+[Email/Password] → Supabase Auth API
+    ↓
+Auth Success → Create Session + Fetch user data from Supabase
    ↓
 Store in Auth Context (React) → Access User Data & Role
    ↓
@@ -64,7 +64,7 @@ User Selects Member → Zone → Action (Check In/Out)
    ↓
 [POST /api/check-in]
    ↓
-Verify User is Authenticated (Firebase Token)
+Verify User is Authenticated (Supabase Session)
    ↓
 Insert into MySQL check_in_logs table
    ↓
@@ -164,40 +164,13 @@ LEFT JOIN check_in_logs cl ON z.zone_id = cl.zone_id
 GROUP BY z.zone_id, z.zone_name, z.capacity;
 ```
 
-## Firebase Firestore Structure
+## Supabase Auth
 
-### Users Collection
-```
-/users/{uid}
-  ├── uid: string (Firebase UID)
-  ├── email: string
-  ├── displayName: string
-  ├── role: string ('superadmin' | 'admin' | 'staff' | 'user')
-  └── createdAt: timestamp
-```
+### Users
+Supabase Auth manages user accounts with built-in authentication. User profiles and roles are stored in a `users` table in MySQL, linked to the Supabase Auth user ID.
 
-### Firestore Security Rules
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can read their own profile
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
-    }
-    
-    // Only superadmins can read other user profiles
-    match /users/{document=**} {
-      allow list: if isAdmin();
-    }
-  }
-  
-  function isAdmin() {
-    return get(/databases/$(database)/documents/users/$(request.auth.uid))
-           .data.role in ['superadmin', 'admin'];
-  }
-}
-```
+### Row Level Security
+Supabase provides Row Level Security (RLS) for database-level access control.
 
 ## API Endpoint Documentation
 
@@ -215,7 +188,7 @@ Response:
 {
   "success": true,
   "message": "Superadmin created successfully",
-  "uid": "firebase-uid",
+  "uid": "user-id",
   "email": "admin@momentum-gym.com"
 }
 ```
@@ -319,34 +292,25 @@ Response:
 ## Environment Variables Reference
 
 ```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
 # MySQL Configuration
-DB_HOST=localhost              # MySQL host
-DB_PORT=3306                   # MySQL port
-DB_USER=root                   # MySQL user
-DB_PASSWORD=                   # MySQL password
-
-# Firebase Client (Public)
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-
-# Firebase Admin (Private/Server-only)
-FIREBASE_PROJECT_ID=...
-FIREBASE_PRIVATE_KEY=...      # Must have \n for newlines
-FIREBASE_CLIENT_EMAIL=...
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
 ```
 
 ## Deployment Checklist
 
 ### Before Deploying to Production
 
-- [ ] Firebase project is created and configured
+- [ ] Supabase project is created and configured
 - [ ] All environment variables are set (never commit .env.local)
 - [ ] MySQL database is backed up
-- [ ] Firestore security rules are reviewed and published
+- [ ] Supabase RLS policies are reviewed and applied
 - [ ] HTTPS is enabled on production domain
 - [ ] CORS is configured for production domain
 - [ ] Rate limiting is implemented on API endpoints
@@ -373,10 +337,10 @@ FIREBASE_CLIENT_EMAIL=...
 - Implement query caching for read-heavy operations
 - Consider read replicas for high-traffic scenarios
 
-### Firebase Optimization
-- Use Firestore composite indexes for complex queries
+### Supabase Optimization
+- Use Supabase query optimization
 - Implement pagination for large result sets
-- Consider Firestore backup plans for disaster recovery
+- Consider Supabase backup plans for disaster recovery
 - Monitor billing and quota usage
 
 ### Caching Strategy
@@ -393,22 +357,22 @@ FIREBASE_CLIENT_EMAIL=...
 - Consider database replication
 
 ### Authentication Failures
-- Verify Firebase credentials in environment
-- Check Firestore security rules
-- Review Firebase Console authentication methods
+- Verify Supabase credentials in environment
+- Check Supabase RLS policies
+- Review Supabase Auth settings
 - Check browser console for CORS errors
 
 ### Real-time Data Lag
 - Verify SWR revalidation intervals
 - Check MySQL query performance
-- Monitor Firebase quota usage
+- Monitor Supabase quota usage
 - Consider WebSocket subscription for live updates
 
 ## Maintenance Tasks
 
 ### Daily
 - Monitor database disk usage
-- Check Firebase billing
+- Check Supabase billing
 - Review error logs
 
 ### Weekly
@@ -418,7 +382,7 @@ FIREBASE_CLIENT_EMAIL=...
 
 ### Monthly
 - Full database backup verification
-- Firestore security rule review
+- Supabase RLS policy review
 - User activity analysis
 - Performance optimization review
 
@@ -426,5 +390,4 @@ FIREBASE_CLIENT_EMAIL=...
 
 For detailed setup instructions, see:
 - [README.md](./README.md) - Project overview
-- [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) - Firebase configuration
 - [SETUP.md](./SETUP.md) - MySQL configuration

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, Plus, User, Mail, Key, Loader2, RefreshCw, MapPin, Trash2 } from 'lucide-react'
+import { Shield, Plus, User, Mail, Key, Loader2, RefreshCw, MapPin, Trash2, Pencil, X } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
 
 interface CreatedAccount {
@@ -37,6 +37,7 @@ export function AdminManagement() {
   const [zoneLoading, setZoneLoading] = useState(false)
   const [zonesList, setZonesList] = useState<any[]>([])
   const [zonesLoading, setZonesLoading] = useState(true)
+  const [editingZoneId, setEditingZoneId] = useState<string | null>(null)
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -106,20 +107,43 @@ export function AdminManagement() {
     e.preventDefault()
     setZoneLoading(true)
     try {
-      await fetch('/api/zones/manage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone_name: zoneName, capacity: zoneCapacity, description: zoneDescription }),
-      })
+      if (editingZoneId) {
+        await fetch('/api/zones/manage', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zone_id: editingZoneId, zone_name: zoneName, capacity: zoneCapacity, description: zoneDescription }),
+        })
+      } else {
+        await fetch('/api/zones/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zone_name: zoneName, capacity: zoneCapacity, description: zoneDescription }),
+        })
+      }
       setZoneName('')
       setZoneCapacity('')
       setZoneDescription('')
+      setEditingZoneId(null)
       fetchZones()
     } catch {
       // ignore
     } finally {
       setZoneLoading(false)
     }
+  }
+
+  const handleEditZone = (zone: any) => {
+    setEditingZoneId(zone.zone_id)
+    setZoneName(zone.zone_name)
+    setZoneCapacity(String(zone.capacity))
+    setZoneDescription(zone.description || '')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingZoneId(null)
+    setZoneName('')
+    setZoneCapacity('')
+    setZoneDescription('')
   }
 
   const handleDeleteZone = async (name: string) => {
@@ -352,15 +376,26 @@ export function AdminManagement() {
               placeholder="Optional"
             />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <button
               type="submit"
               disabled={zoneLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 font-medium text-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 font-medium text-sm"
             >
-              {zoneLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              Add Zone
+              {zoneLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingZoneId ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
+              {editingZoneId ? 'Save' : 'Add Zone'}
             </button>
+            {editingZoneId && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={zoneLoading}
+                className="p-2 bg-muted text-muted-foreground rounded-xl hover:text-foreground transition-colors disabled:opacity-50"
+                title="Cancel Edit"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </form>
         <div className="overflow-x-auto">
@@ -403,13 +438,22 @@ export function AdminManagement() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteZone(zone.zone_name)}
-                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
-                        title="Delete zone"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleEditZone(zone)}
+                          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
+                          title="Edit zone"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteZone(zone.zone_name)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
+                          title="Delete zone"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

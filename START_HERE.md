@@ -6,7 +6,7 @@ Welcome! You have received a **complete, production-ready gym management system*
 
 - ✅ **Status**: Ready to deploy immediately
 - ✅ **Setup Time**: ~20 minutes
-- ✅ **Tech Stack**: Next.js + Firebase + MySQL
+- ✅ **Tech Stack**: Next.js + Supabase + MySQL
 - ✅ **Feature Complete**: Authentication, members, check-ins, analytics
 - ✅ **Well Documented**: 5 comprehensive guides included
 
@@ -16,7 +16,7 @@ Welcome! You have received a **complete, production-ready gym management system*
 
 A professional gym management dashboard featuring:
 
-1. **User Authentication** - Firebase-powered login system
+1. **User Authentication** - Supabase-powered login system
 2. **Member Management** - Add, edit, manage gym members
 3. **Check-In System** - Track member workouts and equipment usage
 4. **Facility Monitoring** - Real-time occupancy and zone capacity
@@ -28,21 +28,9 @@ A professional gym management dashboard featuring:
 
 ## 🚀 Getting Started (3 Steps)
 
-### Step 1: Set Up Firebase (10 minutes)
-
-Firebase handles user authentication for your gym.
-
-**Option A: Follow the detailed guide**
-→ Read [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)
-
-**Quick Summary:**
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create project named "Momentum Gym"
-3. Register a web app
-4. Enable Email/Password authentication
-5. Create Firestore database
-6. Generate service account
-7. Copy credentials to `.env.local`
+### Step 1: Set Up Supabase (10 minutes)
+Supabase handles user authentication for your gym.
+Create a Supabase project, get your project URL and anon key from Settings > API, enable Email/Password auth in Auth > Providers, and add credentials to `.env.local`.
 
 ### Step 2: Set Up MySQL (5 minutes)
 
@@ -95,22 +83,14 @@ Read these in order:
    - Troubleshooting basics
    - **Read time**: 10 minutes
 
-### 2. **[FIREBASE_SETUP.md](./FIREBASE_SETUP.md)** ← Then this
-   - Step-by-step Firebase configuration
-   - Create Firebase project
-   - Enable authentication
-   - Create Firestore database
-   - **Read time**: 15 minutes
-   - **Action required**: Yes, follow all steps
-
-### 3. **[SETUP.md](./SETUP.md)** ← Then this
+### 2. **[SETUP.md](./SETUP.md)** ← Then this
    - MySQL configuration
    - Database schema explanation
    - Environment variable setup
    - **Read time**: 10 minutes
    - **Action required**: Yes, configure .env.local
 
-### 4. **[INTEGRATION.md](./INTEGRATION.md)** ← Reference
+### 3. **[INTEGRATION.md](./INTEGRATION.md)** ← Reference
    - System architecture details
    - API documentation
    - Database schema details
@@ -118,7 +98,7 @@ Read these in order:
    - **Read time**: 20 minutes
    - **Action required**: No, reference only
 
-### 5. **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)** ← Reference
+### 4. **[PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md)** ← Reference
    - What was built
    - Key decisions made
    - Performance metrics
@@ -126,14 +106,14 @@ Read these in order:
    - **Read time**: 10 minutes
    - **Action required**: No, reference only
 
-### 6. **[DELIVERABLES.md](./DELIVERABLES.md)** ← Reference
+### 5. **[DELIVERABLES.md](./DELIVERABLES.md)** ← Reference
    - Complete list of files
    - What's included
    - Code quality metrics
    - **Read time**: 5 minutes
    - **Action required**: No, reference only
 
-### 7. **[COMPLETION_REPORT.md](./COMPLETION_REPORT.md)** ← Reference
+### 6. **[COMPLETION_REPORT.md](./COMPLETION_REPORT.md)** ← Reference
    - Project completion summary
    - What's tested and verified
    - Deployment options
@@ -146,14 +126,12 @@ Read these in order:
 
 Before running the app, you need:
 
-### Firebase Setup
-- [ ] Create Firebase project
-- [ ] Get API keys and IDs
+### Supabase Setup
+- [ ] Create Supabase project
+- [ ] Get project URL and anon key
 - [ ] Enable Email/Password auth
-- [ ] Create Firestore database
-- [ ] Generate service account
-- [ ] Add `NEXT_PUBLIC_FIREBASE_*` vars to `.env.local`
-- [ ] Add `FIREBASE_*` vars to `.env.local`
+- [ ] Add `NEXT_PUBLIC_SUPABASE_URL` to `.env.local`
+- [ ] Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` to `.env.local`
 
 ### MySQL Setup
 - [ ] MySQL server installed/running
@@ -213,10 +191,9 @@ Before running the app, you need:
 
 ## ⚠️ Common Issues & Solutions
 
-### "Firebase is not configured"
-**Solution**: Add Firebase credentials to `.env.local`
-- See FIREBASE_SETUP.md for detailed steps
-- All `NEXT_PUBLIC_FIREBASE_*` variables required
+### "Supabase is not configured"
+**Solution**: Add Supabase credentials to `.env.local`
+- All `NEXT_PUBLIC_SUPABASE_*` variables required
 
 ### "Database Connection Error"
 **Solution**: Configure MySQL connection
@@ -225,9 +202,8 @@ Before running the app, you need:
 - See SETUP.md for help
 
 ### "Cannot create superadmin"
-**Solution**: Verify Firebase setup
-- Check Firebase credentials are correct
-- Ensure Firestore database exists
+**Solution**: Verify Supabase setup
+- Check Supabase credentials are correct
 - Check browser console for errors
 
 ### App doesn't start
@@ -268,7 +244,6 @@ Before running the app, you need:
 
 **Step 1**: Check the relevant documentation
 - General questions? → README.md
-- Firebase not working? → FIREBASE_SETUP.md
 - MySQL not working? → SETUP.md
 - Technical details? → INTEGRATION.md
 
@@ -285,7 +260,7 @@ Before running the app, you need:
 - Check `.env.local` file
 - Verify all variables are set
 - Ensure MySQL is running
-- Ensure Firebase is configured
+- Ensure Supabase is configured
 
 ---
 
@@ -304,12 +279,11 @@ Before running the app, you need:
 ```
 You (Browser)
     ↓
-Firebase Login
+Supabase Login
     ↓
 Dashboard (Real-time data)
     ↓
 MySQL Database (Gym data)
-+ Firestore (User accounts)
 ```
 
 Everything works together to give you:
@@ -332,9 +306,9 @@ Everything works together to give you:
 
 ## 🎓 Learning Resources
 
-### For Firebase
-- [Firebase Auth Guide](https://firebase.google.com/docs/auth)
-- [Firestore Guide](https://firebase.google.com/docs/firestore)
+### For Supabase
+- [Supabase Docs](https://supabase.com/docs)
+- [Supabase Auth Guide](https://supabase.com/docs/guides/auth)
 
 ### For MySQL
 - [MySQL Reference](https://dev.mysql.com/doc/)
@@ -352,7 +326,7 @@ Everything is built and tested. Follow the steps above and you'll have your gym 
 
 ### Summary
 1. ✅ Read README.md (5 min)
-2. ✅ Follow FIREBASE_SETUP.md (15 min)
+2. ✅ Set up environment variables (5 min)
 3. ✅ Follow SETUP.md (5 min)
 4. ✅ Run `pnpm install && pnpm dev` (5 min)
 5. ✅ Create superadmin account (2 min)
@@ -365,7 +339,7 @@ Everything is built and tested. Follow the steps above and you'll have your gym 
 | Item | Location |
 |------|----------|
 | Project Overview | README.md |
-| Firebase Help | FIREBASE_SETUP.md |
+
 | MySQL Help | SETUP.md |
 | API Docs | INTEGRATION.md |
 | Architecture | INTEGRATION.md |

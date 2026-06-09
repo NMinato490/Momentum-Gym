@@ -5,12 +5,14 @@ import { useState, useEffect } from 'react'
 import { BarChart3, Users, LogIn, LogOut, Moon, Sun, Plus, Shield, Database, RefreshCw } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/auth-context'
+import { useSync } from '@/context/sync-context'
 import { createClient } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { userData } = useAuth()
+  const { running, lastSync } = useSync()
   const router = useRouter()
   const pathname = usePathname()
   const activeTab = pathname === '/' ? 'overview' : pathname.replace('/', '')
@@ -87,7 +89,7 @@ export function Sidebar() {
         {menuItems.map(({ id, label, icon: Icon, path, badge }) => (
           <motion.button
             key={id}
-            onClick={() => router.push(path)}
+            onClick={() => { router.push(path); onNavigate?.() }}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-colors ${
               activeTab === id
                 ? 'bg-muted text-foreground font-medium'
@@ -110,16 +112,26 @@ export function Sidebar() {
 
       <div className="pt-6 mt-6 border-t border-border space-y-4">
         {isLocal && mysqlConnected !== null && (
-          <a
-            href="http://127.0.0.1/phpmyadmin/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/50"
-          >
-            <Database className="w-4 h-4" />
-            <span>{mysqlConnected ? 'MySQL Connected' : 'MySQL Disconnected'}</span>
-            <span className={`w-2 h-2 rounded-full ml-auto ${mysqlConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          </a>
+          <div className="flex flex-col gap-2">
+            <a
+              href="http://127.0.0.1/phpmyadmin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/50"
+            >
+              <Database className="w-4 h-4" />
+              <span>{mysqlConnected ? 'MySQL Connected' : 'MySQL Disconnected'}</span>
+              <span className={`w-2 h-2 rounded-full ml-auto ${mysqlConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            </a>
+            <div className="flex items-center gap-3 px-2 py-2 text-xs text-muted-foreground transition-colors rounded-xl">
+              <RefreshCw className={`w-4 h-4 ${running ? 'animate-spin' : ''}`} />
+              <div className="flex flex-col">
+                <span>{running ? 'Syncing...' : 'Python Sync'}</span>
+                {lastSync && <span className="text-[10px] opacity-70">Last: {lastSync}</span>}
+              </div>
+              <span className={`w-2 h-2 rounded-full ml-auto ${running ? 'bg-amber-500' : (lastSync ? 'bg-green-500' : 'bg-muted')}`} />
+            </div>
+          </div>
         )}
         {userData && (
           <div className="flex items-center gap-3 px-2 mb-4">

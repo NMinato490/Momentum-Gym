@@ -17,9 +17,9 @@ You have just received a **complete, production-ready gym management system**. T
 - ✅ Complete documentation
 
 **What You Need:**
-- Firebase account (free)
+- Supabase account (free)
 - MySQL server (included in XAMPP - free)
-- ~20 minutes to set up
+- ~10 minutes to set up
 
 **Status**: 🚀 Ready to deploy today
 
@@ -36,9 +36,8 @@ You have just received a **complete, production-ready gym management system**. T
 ### Option 2: Full Documentation
 1. [START_HERE.md](./START_HERE.md) - Getting started guide
 2. [README.md](./README.md) - Project overview
-3. [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) - Firebase configuration
-4. [SETUP.md](./SETUP.md) - MySQL configuration
-5. [INTEGRATION.md](./INTEGRATION.md) - Technical details
+3. [SETUP.md](./SETUP.md) - MySQL configuration
+4. [INTEGRATION.md](./INTEGRATION.md) - Technical details
 
 ### Option 3: I Need to Know Everything
 Read in this order:
@@ -55,7 +54,6 @@ Read in this order:
 |------|------|
 | Getting started | START_HERE.md |
 | Project overview | README.md |
-| Firebase help | FIREBASE_SETUP.md |
 | MySQL help | SETUP.md |
 | Architecture & API | INTEGRATION.md |
 | What's included | DELIVERABLES.md |
@@ -77,7 +75,7 @@ Read in this order:
 
 ### Backend
 - 7 REST API endpoints
-- Firebase authentication integration
+- Supabase authentication integration
 - MySQL database with auto-initialization
 - Real-time data caching
 - Error handling and validation
@@ -85,7 +83,6 @@ Read in this order:
 
 ### Databases
 - MySQL: Members, zones, equipment, check-ins
-- Firestore: User accounts and roles
 
 ### Documentation
 - 5 comprehensive setup guides
@@ -98,18 +95,12 @@ Read in this order:
 
 ## 🚀 Three Steps to Launch
 
-### Step 1: Firebase (10 min)
-- Create Firebase project
-- Get credentials
-- Add to `.env.local`
-→ Follow [FIREBASE_SETUP.md](./FIREBASE_SETUP.md)
-
-### Step 2: MySQL (5 min)
+### Step 1: MySQL (5 min)
 - Start MySQL server
 - Configure `.env.local`
 → Follow [SETUP.md](./SETUP.md)
 
-### Step 3: Run (5 min)
+### Step 2: Run (5 min)
 ```bash
 pnpm install
 pnpm dev
@@ -118,7 +109,7 @@ pnpm dev
 # You're in!
 ```
 
-**Total Time: 20 minutes**
+**Total Time: 10 minutes**
 
 ---
 
@@ -137,7 +128,7 @@ pnpm dev
 
 That's it! The app will:
 - ✅ Auto-initialize the MySQL database
-- ✅ Connect to Firebase
+- ✅ Connect to Supabase
 - ✅ Show the login page
 - ✅ Let you create a superadmin account
 - ✅ Display the complete dashboard
@@ -148,9 +139,9 @@ That's it! The app will:
 
 Before running the app:
 
-- [ ] You have Firebase account (free - google.com/firebase)
+- [ ] You have Supabase account (free - supabase.com)
 - [ ] You have MySQL server (XAMPP - free)
-- [ ] You created `.env.local` with Firebase config
+- [ ] You created `.env.local` with Supabase config
 - [ ] You updated `.env.local` with MySQL config
 - [ ] You ran `pnpm install`
 - [ ] You can run `pnpm dev` without errors
@@ -194,7 +185,6 @@ If all checked ✅, you're ready to go!
 
 ### Database
 - ✅ MySQL schema with 5 tables
-- ✅ Firestore user structure
 - ✅ Real-time facility summary view
 - ✅ Automatic initialization on first run
 - ✅ Sample data included
@@ -202,7 +192,6 @@ If all checked ✅, you're ready to go!
 ### Documentation
 - ✅ START_HERE.md (this guide)
 - ✅ README.md (project overview)
-- ✅ FIREBASE_SETUP.md (Firebase guide)
 - ✅ SETUP.md (MySQL guide)
 - ✅ INTEGRATION.md (technical details)
 - ✅ DELIVERABLES.md (what's included)
@@ -213,11 +202,10 @@ If all checked ✅, you're ready to go!
 
 ## 🔐 Security Features
 
-- Firebase authentication with password hashing
+- Supabase authentication
 - Role-based access control (Superadmin, Admin, Staff, User)
 - Server-side session management
 - Environment variables for secrets
-- Firestore security rules
 - SQL parameter binding
 - HTTPS-ready configuration
 
@@ -275,8 +263,8 @@ If all checked ✅, you're ready to go!
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Firebase Admin SDK
-- **Databases**: MySQL, Firebase Firestore
+- **Backend**: Next.js API Routes, Supabase
+- **Databases**: MySQL, Supabase
 - **Libraries**: SWR (data fetching), shadcn/ui, Lucide React
 
 ---
@@ -319,13 +307,12 @@ momentum-gym/
 │   └── layout.tsx        (Root layout)
 ├── components/           (10+ components)
 ├── context/              (Auth context)
-├── lib/                  (Firebase, MySQL)
+├── lib/                  (Supabase, MySQL)
 ├── public/               (Logo)
 ├── .env.local            (Config - you create this)
 ├── package.json          (Dependencies)
 ├── START_HERE.md         (Getting started) ← Read first
 ├── README.md             (Project overview)
-├── FIREBASE_SETUP.md     (Firebase guide)
 ├── SETUP.md              (MySQL guide)
 ├── INTEGRATION.md        (Technical details)
 ├── DELIVERABLES.md       (What's included)
@@ -340,7 +327,7 @@ momentum-gym/
 | Step | Time |
 |------|------|
 | Read START_HERE.md | 5 min |
-| Firebase setup | 10 min |
+| Supabase setup | 10 min |
 | MySQL setup | 5 min |
 | Run app & test | 5 min |
 | **Total** | **25 min** |
@@ -353,7 +340,7 @@ momentum-gym/
 2. **Tested** - All components verified
 3. **Documented** - 5 comprehensive guides
 4. **Branded** - Momentum Gym logos and styling
-5. **Secure** - Firebase auth, role-based access
+5. **Secure** - Supabase auth, role-based access
 6. **Scalable** - Database pooling, optimized queries
 7. **Production-Ready** - Error handling, validation, security
 
@@ -386,10 +373,9 @@ momentum-gym/
 
 | Problem | Solution |
 |---------|----------|
-| "Firebase not configured" | Follow FIREBASE_SETUP.md |
 | "Database connection error" | Follow SETUP.md |
 | App won't start | Run `pnpm install` again |
-| Can't create superadmin | Check Firebase setup |
+| Can't login | Check Supabase setup |
 | Dashboard blank | Check MySQL connection |
 
 **For more help**: Check the relevant guide in documentation
@@ -398,7 +384,7 @@ momentum-gym/
 
 ## 🎓 Support Resources
 
-- [Firebase Docs](https://firebase.google.com/docs)
+- [Supabase Docs](https://supabase.com/docs)
 - [Next.js Docs](https://nextjs.org/docs)
 - [MySQL Docs](https://dev.mysql.com/doc/)
 - [Tailwind CSS](https://tailwindcss.com/docs)

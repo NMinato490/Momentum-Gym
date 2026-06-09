@@ -91,27 +91,113 @@ export async function initializeDatabase() {
       )
     `);
 
-    // Create summary view
+    // Facility summary table (materialized cache updated by triggers)
     await connection.execute(`
-      CREATE OR REPLACE VIEW vw_GymFacilitySummary AS
+      CREATE TABLE IF NOT EXISTS facility_summary (
+        summary_id INT PRIMARY KEY AUTO_INCREMENT,
+        zone_id INT NOT NULL,
+        zone_name VARCHAR(100) NOT NULL,
+        capacity INT NOT NULL,
+        active_members INT DEFAULT 0,
+        occupancy_percentage DECIMAL(5,2) DEFAULT 0.00,
+        density_status VARCHAR(20) DEFAULT 'Empty',
+        total_equipment INT DEFAULT 0,
+        equipment_in_use INT DEFAULT 0,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (zone_id) REFERENCES zones(zone_id) ON DELETE CASCADE,
+        UNIQUE KEY uk_zone_id (zone_id)
+      )
+    `);
+
+    // Initialize facility_summary with current data
+    await connection.execute(`
+      INSERT INTO facility_summary (zone_id, zone_name, capacity, active_members, occupancy_percentage, density_status, total_equipment, equipment_in_use)
       SELECT
-        z.zone_id,
-        z.zone_name,
-        z.capacity,
-        COUNT(DISTINCT cl.log_id) as active_members,
-        ROUND((COUNT(DISTINCT cl.log_id) / z.capacity) * 100, 2) as occupancy_percentage,
+        z.zone_id, z.zone_name, z.capacity,
+        COUNT(DISTINCT cl.log_id),
+        ROUND((COUNT(DISTINCT cl.log_id) / z.capacity) * 100, 2),
         CASE
           WHEN (COUNT(DISTINCT cl.log_id) / z.capacity) >= 0.8 THEN 'Critical'
           WHEN (COUNT(DISTINCT cl.log_id) / z.capacity) >= 0.6 THEN 'Warning'
           ELSE 'Healthy'
-        END as density_status,
-        COUNT(DISTINCT e.equipment_id) as total_equipment,
-        SUM(CASE WHEN e.status = 'in_use' THEN 1 ELSE 0 END) as equipment_in_use,
-        CURRENT_TIMESTAMP as last_updated
+        END,
+        COUNT(DISTINCT e.equipment_id),
+        SUM(CASE WHEN e.status = 'in_use' THEN 1 ELSE 0 END)
       FROM zones z
       LEFT JOIN equipment e ON z.zone_id = e.zone_id
       LEFT JOIN check_in_logs cl ON z.zone_id = cl.zone_id AND cl.check_out_time IS NULL
       GROUP BY z.zone_id, z.zone_name, z.capacity
+      ON DUPLICATE KEY UPDATE
+        active_members = VALUES(active_members),
+        occupancy_percentage = VALUES(occupancy_percentage),
+        density_status = VALUES(density_status),
+        total_equipment = VALUES(total_equipment),
+        equipment_in_use = VALUES(equipment_in_use)
+    `);
+
+    // Summary view (reads from facility_summary, auto-updated by triggers)
+    await connection.execute(`
+      CREATE OR REPLACE VIEW vw_GymFacilitySummary AS
+      SELECT
+        zone_id,
+        zone_name,
+        capacity,
+        active_members,
+        occupancy_percentage,
+        density_status,
+        total_equipment,
+        equipment_in_use,
+        last_updated
+      FROM facility_summary
+      ORDER BY zone_id
+    `);
+
+    // Drop existing triggers
+    await connection.execute('DROP TRIGGER IF EXISTS after_check_in_log_insert');
+    await connection.execute('DROP TRIGGER IF EXISTS after_check_in_log_update');
+
+    // Trigger: on check-in (INSERT) -> update facility_summary
+    await connection.execute(`
+      CREATE TRIGGER after_check_in_log_insert
+      AFTER INSERT ON check_in_logs
+      FOR EACH ROW
+      BEGIN
+        DECLARE active INT;
+        SELECT COUNT(*) INTO active FROM check_in_logs WHERE zone_id = NEW.zone_id AND check_out_time IS NULL;
+        INSERT INTO facility_summary (zone_id, zone_name, capacity, active_members, occupancy_percentage, density_status, last_updated)
+        SELECT z.zone_id, z.zone_name, z.capacity, active,
+          ROUND(active / z.capacity * 100, 2),
+          CASE WHEN active / z.capacity >= 0.8 THEN 'Critical' WHEN active / z.capacity >= 0.6 THEN 'Warning' ELSE 'Healthy' END,
+          CURRENT_TIMESTAMP
+        FROM zones z WHERE z.zone_id = NEW.zone_id
+        ON DUPLICATE KEY UPDATE
+          active_members = active,
+          occupancy_percentage = ROUND(active / capacity * 100, 2),
+          density_status = CASE WHEN active / capacity >= 0.8 THEN 'Critical' WHEN active / capacity >= 0.6 THEN 'Warning' ELSE 'Healthy' END,
+          last_updated = CURRENT_TIMESTAMP;
+      END
+    `);
+
+    // Trigger: on check-out (UPDATE) -> update facility_summary
+    await connection.execute(`
+      CREATE TRIGGER after_check_in_log_update
+      AFTER UPDATE ON check_in_logs
+      FOR EACH ROW
+      BEGIN
+        DECLARE active INT;
+        SELECT COUNT(*) INTO active FROM check_in_logs WHERE zone_id = NEW.zone_id AND check_out_time IS NULL;
+        INSERT INTO facility_summary (zone_id, zone_name, capacity, active_members, occupancy_percentage, density_status, last_updated)
+        SELECT z.zone_id, z.zone_name, z.capacity, active,
+          ROUND(active / z.capacity * 100, 2),
+          CASE WHEN active / z.capacity >= 0.8 THEN 'Critical' WHEN active / z.capacity >= 0.6 THEN 'Warning' ELSE 'Healthy' END,
+          CURRENT_TIMESTAMP
+        FROM zones z WHERE z.zone_id = NEW.zone_id
+        ON DUPLICATE KEY UPDATE
+          active_members = active,
+          occupancy_percentage = ROUND(active / capacity * 100, 2),
+          density_status = CASE WHEN active / capacity >= 0.8 THEN 'Critical' WHEN active / capacity >= 0.6 THEN 'Warning' ELSE 'Healthy' END,
+          last_updated = CURRENT_TIMESTAMP;
+      END
     `);
 
     // Insert seed data

@@ -30,6 +30,12 @@ function getAuth() {
 
   privateKey = privateKey.replace(/\\n/g, '\n');
 
+  const keyFormatted = privateKey.includes('-----BEGIN ') && privateKey.includes('\n');
+  console.log('[Google Auth] Key starts with:', privateKey.substring(0, 50).replace(/\n/g, '\\n'));
+  console.log('[Google Auth] Key has PEM headers:', keyFormatted);
+  console.log('[Google Auth] Key lines:', privateKey.split('\n').length);
+  console.log('[Google Auth] Email:', email);
+
   return new google.auth.JWT({
     email,
     key: privateKey,
@@ -87,11 +93,12 @@ async function getOrCreateSpreadsheet(sheets: any) {
     const res = await sheets.spreadsheets.create({
       requestBody: {
         properties: { title: 'Momentum-Gym' },
-        sheets: [
-          { properties: { title: 'Members' } },
-          { properties: { title: 'Zones' } },
-          { properties: { title: 'Check-Ins' } },
-        ],
+      sheets: [
+        { properties: { title: 'Members' } },
+        { properties: { title: 'Zones' } },
+        { properties: { title: 'Check-Ins' } },
+        { properties: { title: 'Facility Summary' } },
+      ],
       },
     });
     return res.data.spreadsheetId;
